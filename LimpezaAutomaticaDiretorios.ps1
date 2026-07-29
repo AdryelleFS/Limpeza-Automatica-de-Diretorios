@@ -62,6 +62,4 @@ foreach($Pasta in $PastasExcluidas){
 }
 
 Write-Relatorio-Log "Fim da execução"
-ForEach-Object {
-    Remove-Item $_.FullName -Recurse -Force
-}
+
