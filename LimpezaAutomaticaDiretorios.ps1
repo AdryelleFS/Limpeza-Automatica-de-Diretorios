@@ -1,3 +1,15 @@
+# Caminho da pasta Output
+param(
+    [string]$PastaOutput
+)
+
+#Registros de erros: 
+# Verifica se a pasta existe, caso não exista, apresenta uma mensagem de erro
+if (-not (Test-Path $PastaOutput)) {
+    Write-Relatorio-Log "ERRO: Diretório não encontrado: $PastaOutput"
+    exit
+}
+
 # Caminho do arquivo Relatorio.log
 $RelatorioLog = "C:\Users\adryelle.sousa\Teste scripts\Logs\Relatorio_$(Get-Date -Format 'yyyy-MM-dd').log"
 
@@ -9,9 +21,6 @@ function Write-Relatorio-Log {
 }
 
 Write-Relatorio-Log "Início da execução"
-
-# Caminho da pasta Output
-$PastaOutput = "C:\Users\adryelle.sousa\Teste scripts\Output"
 
 # Data limite para que a pasta seja apagada
 $DataLimite = (Get-Date).AddMonths(-2)
@@ -44,7 +53,15 @@ ForEach-Object {
         Modificacao = $_.LastWriteTime
     }
     $QntPastasExcluidas++
-    Remove-Item $_.FullName -Recurse -Force
+
+    # Caso o usuário em questão não possuir permissão ou a pasta estiver bloqueada
+    #Apresentaa a mensagem de erro no relátorio 
+    try {
+       Remove-Item $_.FullName -Recurse -Force -ErrorAction Stop
+    }
+    catch {
+        Write-Relatorio-Log "ERRO ao excluir $($_.Name): $($_.Exception.Message)"
+    }
 }
 
 # Passa para o Relatorio.log  as informações necessárias 
