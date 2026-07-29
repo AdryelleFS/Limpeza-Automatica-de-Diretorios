@@ -28,10 +28,6 @@ $PastasExcluidas = @()
 # Listar as pastas dentro de Output
 Get-ChildItem $PastaOutput -Directory | 
 
-# Enquanto a pasta tiver mais de 2 meses e for diferente de "Estrutura Redigist" será apagada 
-#Listar as pastas dentro de Output
-Get-ChildItem $PastaOutput -Directory |
-
 #Enquanto a pasta tiver mais de 2 meses e for diferente de "Estrutura Redigist" será apagada 
 Where-Object {
     ($_.CreationTime -lt $DataLimite -or
