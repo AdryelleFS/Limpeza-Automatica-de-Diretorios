@@ -16,7 +16,7 @@ $RelatorioLog = "C:\Users\adryelle.sousa\Teste scripts\Logs\Relatorio_$(Get-Date
 # Função para a escrita do Relatorio.log
 function Write-Relatorio-Log {
     param($Mensagem)
-    Add-Content -Path $RelatorioLog `
+        Add-Content -Path $RelatorioLog `
         -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] $Mensagem"
 }
 
@@ -30,6 +30,9 @@ $PastasAnalisadas = (Get-ChildItem $PastaOutput -Directory).Count
 
 # Contador para contabilizar a quantidade de pastas excluidas 
 $QntPastasExcluidas = 0
+
+# O espaço que é liberado no disco ao excluir as pastas 
+$EspacoLiberado = 0
 
 # Array de pastas excluidas com seu nome, data de criação e modificação 
 $PastasExcluidas = @()
@@ -54,6 +57,13 @@ ForEach-Object {
     }
     $QntPastasExcluidas++
 
+    # Soma o tamanho de todos os arquivos da pasta para dar a quantidade de espaço liberado no disco
+    $TamanhoPasta = (
+    (Get-ChildItem $Pasta -Recurse -File | 
+    Measure-Object Length -Sum).Sum / 1MB
+    ).Sum
+    $EspacoLiberado += $TamanhoPasta
+
     # Caso o usuário em questão não possuir permissão ou a pasta estiver bloqueada
     #Apresentaa a mensagem de erro no relátorio 
     try {
@@ -67,6 +77,7 @@ ForEach-Object {
 # Passa para o Relatorio.log  as informações necessárias 
 Write-Relatorio-Log "Total de pastas analisadas: $PastasAnalisadas"
 Write-Relatorio-Log "Total de pastas excluidas: $QntPastasExcluidas"
+Write-Relatorio-Log "Total de espaço liberado no disco: $EspacoLiberado"
 
 foreach($Pasta in $PastasExcluidas){
     Write-Relatorio-Log "Pasta excluída: $($Pasta.Nome)"
@@ -75,4 +86,3 @@ foreach($Pasta in $PastasExcluidas){
 }
 
 Write-Relatorio-Log "Fim da execução"
-
