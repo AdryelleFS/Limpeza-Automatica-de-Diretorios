@@ -3,13 +3,6 @@ param(
     [string]$PastaOutput
 )
 
-#Registros de erros: 
-# Verifica se a pasta existe, caso não exista, apresenta uma mensagem de erro
-if (-not (Test-Path $PastaOutput)) {
-    Write-Relatorio-Log "ERRO: Diretório não encontrado: $PastaOutput"
-    exit
-}
-
 # Caminho do arquivo Relatorio.log
 $RelatorioLog = "C:\Users\adryelle.sousa\Teste scripts\Logs\Relatorio_$(Get-Date -Format 'yyyy-MM-dd').log"
 
@@ -19,6 +12,14 @@ function Write-Relatorio-Log {
         Add-Content -Path $RelatorioLog `
         -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] $Mensagem"
 }
+
+#Registros de erros: 
+# Verifica se a pasta existe, caso não exista, apresenta uma mensagem de erro
+if (-not (Test-Path $PastaOutput)) {
+    Write-Relatorio-Log "ERRO: Diretório não encontrado: $PastaOutput"
+    exit
+}
+
 
 Write-Relatorio-Log "Início da execução"
 
@@ -59,25 +60,29 @@ ForEach-Object {
 
     # Soma o tamanho de todos os arquivos da pasta para dar a quantidade de espaço liberado no disco
     $TamanhoPasta = (
-    (Get-ChildItem $Pasta -Recurse -File | 
+    (Get-ChildItem $_.FullName -Recurse -File | 
     Measure-Object Length -Sum).Sum / 1MB
-    ).Sum
-    $EspacoLiberado += $TamanhoPasta
+    )
 
     # Caso o usuário em questão não possuir permissão ou a pasta estiver bloqueada
     #Apresentaa a mensagem de erro no relátorio 
     try {
        Remove-Item $_.FullName -Recurse -Force -ErrorAction Stop
+
+       # Adiciona o tamanho da pasta ao espaço liberado
+        $EspacoLiberado += $TamanhoPasta
+
     }
+
     catch {
         Write-Relatorio-Log "ERRO ao excluir $($_.Name): $($_.Exception.Message)"
     }
 }
 
-# Passa para o Relatorio.log  as informações necessárias 
+# Passa para o Relatorio.log  as informações necessárias   
 Write-Relatorio-Log "Total de pastas analisadas: $PastasAnalisadas"
 Write-Relatorio-Log "Total de pastas excluidas: $QntPastasExcluidas"
-Write-Relatorio-Log "Total de espaço liberado no disco: $EspacoLiberado"
+Write-Relatorio-Log "Total de espaço liberado no disco: $([math]::Round($EspacoLiberado, 2)) MB"
 
 foreach($Pasta in $PastasExcluidas){
     Write-Relatorio-Log "Pasta excluída: $($Pasta.Nome)"
