@@ -1,31 +1,19 @@
-<#
-.SYNOPSIS
-    Limpeza automatica de subpastas antigas dentro da pasta Output.
+# Limpeza automatica de subpastas com mais de dois meses dentro da pasta Output, 
+# mantendo a pasta "Estrutura Redigist" e gerando um relatório de Log sobre a execução do script.
 
-.DESCRIPTION
-    Percorre a pasta informada em $PastaOutput, identifica todas as subpastas
-    existentes e remove as que tem mais de 2 meses (sem criacao/alteracao
-    recente), exceto a pasta "Estrutura Redist", que nunca e removida.
-    Gera um relatorio diario (Logs\Relatorio_AAAA-MM-DD.log) com data/hora,
-    quantidade de pastas analisadas, pastas excluidas (nome + datas), total
-    removido, espaco liberado em disco e eventuais erros/excecoes.
+# Caminho da pasta Output por parametro. 
+#Caminho da pasta a ser analisada. Parametrizado para nâo depender de  valor fixo no corpo do script. 
 
-.PARAMETER PastaOutput
-    Caminho da pasta a ser analisada. Parametrizado para nao depender de
-    valor fixo no corpo do script. Caso nao seja informado na chamada,
-    assume o valor default abaixo (ajustar para o ambiente de producao
-    antes de implantar).
+# Requisito de agendamento: executar semanalmente, toda sexta-feira, via Agendador de Tarefas do 
+# Windows (ver Documento de Implantacao).
 
-.NOTES
-    Requisito de agendamento: executar semanalmente, toda sexta-feira,
-    via Agendador de Tarefas do Windows (ver Documento de Implantacao).
-#>
 
 param(
-    [string]$PastaOutput = "C:\Output"   # <-- ajustar para o caminho real do ambiente antes de implantar
+    [string]$PastaOutput = "C:\Output"   # <-- fornecer o caminho real do ambiente no momento da compilação.
 )
 
-# ===================== CONFIGURACAO DE LOG =====================
+# Configuração do caminho do arquivo de Log. O arquivo será criado na pasta "Log",
+# no mesmo diretório do script. Se a pasta Log não existe, ela será criada automaticamente.  
 $PastaLogs = Join-Path $PSScriptRoot "Logs"
 
 if (-not (Test-Path $PastaLogs)) {
@@ -34,13 +22,13 @@ if (-not (Test-Path $PastaLogs)) {
 
 $RelatorioLog = Join-Path $PastaLogs "Relatorio_$(Get-Date -Format 'yyyy-MM-dd').log"
 
-# Funcao para a escrita do Relatorio.log
+# Função para a escrita do Relatorio.log.
 function Write-RelatorioLog {
     param($Mensagem)
     Add-Content -Path $RelatorioLog -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] $Mensagem"
 }
 
-# ===================== VALIDACOES =====================
+# Validações, tratamento de erros e registro de falhas. 
 if ([string]::IsNullOrWhiteSpace($PastaOutput)) {
     Write-RelatorioLog "ERRO: parametro PastaOutput nao informado e sem valor default valido."
     exit 1
@@ -51,21 +39,23 @@ if (-not (Test-Path $PastaOutput)) {
     exit 1
 }
 
+# Início da execução do script.
 Write-RelatorioLog "Inicio da execucao"
 Write-RelatorioLog "Pasta analisada: $PastaOutput"
 
+#Tempo limite de dois meses para a exclusão de pastas.
 $DataLimite = (Get-Date).AddMonths(-2)
 
-# Uso de -LiteralPath em vez de passagem livre previne quebra de caminhos com colchetes []
+#Quantidade de pastas analisadas, incluindo as que não foram excluídas. Quantidade de pastas em Output.
 $PastasAnalisadas = (Get-ChildItem -LiteralPath $PastaOutput -Directory -Force).Count
 
-# Contadores
+# Contadores:
 $QntPastasExcluidas = 0
 
-# CORREÇÃO: Força o tipo [double] (ponto flutuante) para garantir precisão e evitar erro de cast em somas sucessivas
+# Força o tipo [double] para garantir precisão e evitar erro de cast em somas sucessivas.
 [double]$EspacoLiberado = 0
 
-# Lista de pastas efetivamente excluidas
+# Lista de pastas efetivamente excluidas.
 $PastasExcluidas = @()
 
 Get-ChildItem -LiteralPath $PastaOutput -Directory -Force |
@@ -76,12 +66,11 @@ Get-ChildItem -LiteralPath $PastaOutput -Directory -Force |
     ForEach-Object {
         $Pasta = $_
 
-        # CORREÇÃO: Adicionado o -LiteralPath.
-        # Separamos a consulta Get-ChildItem do Measure-Object para validar se a pasta realmente possui 
-        # arquivos antes de tentar medir, impedindo que pastas vazias enviem "nada" pro Measure-Object e quebrem o cálculo.
         $Arquivos = Get-ChildItem -LiteralPath $Pasta.FullName -Recurse -File -Force -ErrorAction SilentlyContinue
         
+        #Tamanho da pasta em MB.
         $TamanhoPasta = 0
+
         if ($null -ne $Arquivos) {
             # Realiza a medida apenas se houverem arquivos identificados
             $Medida = $Arquivos | Measure-Object -Property Length -Sum
@@ -90,11 +79,12 @@ Get-ChildItem -LiteralPath $PastaOutput -Directory -Force |
             }
         }
 
+        #Remove a pasta e incrementa os contadores de pastas excluídas e espaços liberados.
         try {
-            # CORREÇÃO: Adicionado o -LiteralPath no momento da exclusão também para consistência.
             Remove-Item -LiteralPath $Pasta.FullName -Recurse -Force -ErrorAction Stop
 
             $QntPastasExcluidas++
+
             $EspacoLiberado += $TamanhoPasta
 
             $PastasExcluidas += [PSCustomObject]@{
@@ -103,12 +93,13 @@ Get-ChildItem -LiteralPath $PastaOutput -Directory -Force |
                 Modificacao = $Pasta.LastWriteTime
             }
         }
+        #Caso ocorra algum erro na exclçusão da pasta, registra o erro no relatório de Log.
         catch {
             Write-RelatorioLog "ERRO ao excluir $($Pasta.Name): $($_.Exception.Message)"
         }
     }
 
-# Passa para o Relatorio.log as informacoes necessarias
+# Passa para o Relatorio.log as informacoes necessárias. 
 Write-RelatorioLog "Total de pastas analisadas: $PastasAnalisadas"
 Write-RelatorioLog "Total de pastas excluidas: $QntPastasExcluidas"
 Write-RelatorioLog "Total de espaco liberado no disco: $([math]::Round($EspacoLiberado, 2)) MB"
