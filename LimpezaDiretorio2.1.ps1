@@ -58,6 +58,7 @@ $QntPastasExcluidas = 0
 # Lista de pastas efetivamente excluidas.
 $PastasExcluidas = @()
 
+# Filtra as pastas de Output que atendem os critérios de exclusão e processa cada uma delas. 
 Get-ChildItem -LiteralPath $PastaOutput -Directory -Force |
     Where-Object {
         ($_.CreationTime -lt $DataLimite -or $_.LastWriteTime -lt $DataLimite) -and
@@ -69,11 +70,13 @@ Get-ChildItem -LiteralPath $PastaOutput -Directory -Force |
         $Arquivos = Get-ChildItem -LiteralPath $Pasta.FullName -Recurse -File -Force -ErrorAction SilentlyContinue
         
         #Tamanho da pasta em MB.
-        $TamanhoPasta = 0
+        [double]$TamanhoPasta = 0
+        $QtdArquivos = 0
 
         if ($null -ne $Arquivos) {
-            # Realiza a medida apenas se houverem arquivos identificados
+            # Realiza a medida apenas se houverem arquivos identificados.
             $Medida = $Arquivos | Measure-Object -Property Length -Sum
+            $QtdArquivos = $Medida.Count
             if ($null -ne $Medida.Sum) {
                 $TamanhoPasta = $Medida.Sum / 1MB
             }
@@ -91,6 +94,8 @@ Get-ChildItem -LiteralPath $PastaOutput -Directory -Force |
                 Nome        = $Pasta.Name
                 DataCriacao = $Pasta.CreationTime
                 Modificacao = $Pasta.LastWriteTime
+                TamanhoMB   = $TamanhoPasta
+                QtdArquivos = $QtdArquivos
             }
         }
         #Caso ocorra algum erro na exclçusão da pasta, registra o erro no relatório de Log.
@@ -102,12 +107,14 @@ Get-ChildItem -LiteralPath $PastaOutput -Directory -Force |
 # Passa para o Relatorio.log as informacoes necessárias. 
 Write-RelatorioLog "Total de pastas analisadas: $PastasAnalisadas"
 Write-RelatorioLog "Total de pastas excluidas: $QntPastasExcluidas"
-Write-RelatorioLog "Total de espaco liberado no disco: $([math]::Round($EspacoLiberado, 2)) MB"
+Write-RelatorioLog "Total de espaco liberado no disco: $([math]::Round($EspacoLiberado, 4)) MB"
 
 foreach ($Pasta in $PastasExcluidas) {
     Write-RelatorioLog "Pasta excluida: $($Pasta.Nome)"
     Write-RelatorioLog "Data de criacao: $($Pasta.DataCriacao)"
     Write-RelatorioLog "Ultima modificacao: $($Pasta.Modificacao)"
+    Write-RelatorioLog "Arquivos removidos nesta pasta: $($Pasta.QtdArquivos)"
+    Write-RelatorioLog "Espaco liberado por esta pasta: $([math]::Round($Pasta.TamanhoMB, 4)) MB"
 }
 
 Write-RelatorioLog "Fim da execucao"
