@@ -4,7 +4,7 @@ param(
 )
 
 # Caminho do arquivo Relatorio.log
-$RelatorioLog = "C:\Users\adryelle.sousa\Teste scripts\Logs\Relatorio_$(Get-Date -Format 'yyyy-MM-dd').log"
+$RelatorioLog = "C:\Users\adryelle.sousa\Teste scripts\Logs\Relatorio_$(Get-Date -Format 'yyyy-MM-dd').log" # Não pode 
 
 # Função para a escrita do Relatorio.log
 function Write-Relatorio-Log {
