@@ -43,7 +43,7 @@ A maneira recomendada de rodar este script é através do **Agendador de Tarefas
 
 > **Atenção:** Lembre-se de substituir `"C:\Caminho\Para\Output"` pelo caminho real do diretório alvo. Mantenha as aspas no caminho.
 
-## 📊 Logs de Execução
+#### Logs de Execução
 
 A cada execução (manual ou agendada), o script verifica e limpa os arquivos de forma silenciosa (sem abrir telas). Os resultados são salvos em uma pasta `Logs` gerada automaticamente no mesmo local do script.
 
